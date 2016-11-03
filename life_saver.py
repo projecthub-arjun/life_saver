@@ -185,7 +185,7 @@ class Twilio:
         # Twilio account details
         self.account_sid = "ACee1e2fcd3d78d43b31d37fcff00debc2"
         self.auth_token  = "07557fc2fc9533b6d1c862ff77de1088"
-        self.account_phone_number =  "+15108170384"
+        self.account_phone_number =  "+12014823878"
         self.call_pickup_url = "http://twimlets.com/holdmusic?Bucket=com.twilio.music.ambient"
         self.call_ring_timeout_s = 20
         self.failed_recipient_list = list()
@@ -211,16 +211,16 @@ class Twilio:
 
         return self.recipient_list
 
-    def broadcast_emergency_message(self, message):
-        for phone_number in self.recipient_list:
+    def broadcast_emergency_message(self, message, recipient_list):
+        for phone_number in recipient_list:
             print 'Sending SMS ', phone_number
             self.twilio_client.messages.create(to = phone_number, from_ = self.account_phone_number, body = message)
             time.sleep(1)
 
-    def broadcast_emergency_call(self):
+    def broadcast_emergency_call(self, recipient_list):
         self.utc_start_time = datetime.utcnow()
         self.call_status = dict()
-        for phone_number in self.recipient_list:
+        for phone_number in recipient_list:
             print 'Calling ', phone_number
             self.twilio_client.calls.create(to = phone_number, from_= self.account_phone_number, url= self.call_pickup_url, timeout = self.call_ring_timeout_s)
             time.sleep(2)
@@ -244,15 +244,15 @@ class Twilio:
 # this will try to broadcast the calls until it is
 # picked up by the user
 def broadcast_emergency(twilio_client, message):
-    twilio_client.broadcast_emergency_message(message)
-    twilio_client.broadcast_emergency_call()
+    twilio_client.broadcast_emergency_message(message, twilio_client.recipient_list)
+    twilio_client.broadcast_emergency_call(twilio_client.recipient_list)
     retry_failed_calls = True
     while(retry_failed_calls):
         time.sleep(30)
         failed_recipient_list = twilio_client.update_call_status()
         if failed_recipient_list:
             print 'Retrying Calls', failed_recipient_list
-            twilio_client.broadcast_emergency_call()
+            twilio_client.broadcast_emergency_call(failed_recipient_list)
         else:
             break;
 
@@ -282,8 +282,8 @@ def monitor_vehicle():
             manual_restart_screen(general_profile)
             while(1):
                 pass
-    except:
-        pass
+    except Exception as e:
+        print e
     # Run indefinitely
     while(1):
         try:
@@ -318,28 +318,31 @@ def monitor_vehicle():
                             message = "Accident!, http://maps.google.com/maps?q={},{} {}".format(lat, lon, reverse_gps_lookup(lat, lon))
                             retry_sms = False
                         print message
-                        twilio_client.broadcast_emergency_message(message)
-                        twilio_client.broadcast_emergency_call()
+                        twilio_client.broadcast_emergency_message(message, twilio_client.recipient_list)
+                        twilio_client.broadcast_emergency_call(twilio_client.recipient_list)
 
                         while(True):
-                            time.sleep(30)
+                            try:
+                                time.sleep(30)
 
-                            if(retry_sms):
-                                print 'Trying to get location...'
-                                acc_x, lat, lon = arduino_nano.get_sensor_data()
-                                if(lat != "0.0" or lon != "0.0"):
-                                    message = "Accident!, http://maps.google.com/maps?q={},{} {}".format(lat, lon, reverse_gps_lookup(lat, lon))
-                                    print message
-                                    twilio_client.broadcast_emergency_message(message)
-                                    retry_sms = False
+                                if(retry_sms):
+                                    print 'Trying to get location...'
+                                    acc_x, lat, lon = arduino_nano.get_sensor_data()
+                                    if(lat != "0.0" or lon != "0.0"):
+                                        message = "Accident!, http://maps.google.com/maps?q={},{} {}".format(lat, lon, reverse_gps_lookup(lat, lon))
+                                        print message
+                                        twilio_client.broadcast_emergency_message(message, twilio_client.recipient_list)
+                                        retry_sms = False
 
-                            failed_recipient_list = twilio_client.update_call_status()
-                            if failed_recipient_list:
-                                print 'Retrying Calls', failed_recipient_list
-                                twilio_client.broadcast_emergency_call()
+                                failed_recipient_list = twilio_client.update_call_status()
+                                if failed_recipient_list:
+                                    print 'Retrying Calls', failed_recipient_list
+                                    twilio_client.broadcast_emergency_call(failed_recipient_list)
 
-                            if(retry_sms == False and not failed_recipient_list):
-                                break
+                                if(retry_sms == False and not failed_recipient_list):
+                                    break
+                            except Exception as e:
+                                print e
 
                         # Display the screen, that shows help is on its way
                         calling_help_success_screen(general_profile)
@@ -349,11 +352,11 @@ def monitor_vehicle():
                         # Wait 5 seconds before going back to monitoring vehicle
                         time.sleep(5)
                         break;
-                    except:
-                        pass
+                    except Exception as e:
+                        print e
                 print 'Monitoring Vehicle...'
-        except:
-            pass
+        except Exception as e:
+            print e
 """
 def signal_handler(signal, frame):
     general_profile = OLED(font_type = '/home/pi/life_saver/Starjedi.ttf', font_size = 18)

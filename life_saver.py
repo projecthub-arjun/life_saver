@@ -183,8 +183,8 @@ def manual_restart_screen(screen):
 class Twilio:
     def __init__(self):
         # Twilio account details
-        self.account_sid = "AC179d47f10d3fef703f8641c25c531949"
-        self.auth_token  = "1fb6b1ae73df64220f9817c882a18df1"
+        self.account_sid = "ACee1e2fcd3d78d43b31d37fcff00debc2"
+        self.auth_token  = "07557fc2fc9533b6d1c862ff77de1088"
         self.account_phone_number =  "+15108170384"
         self.call_pickup_url = "http://twimlets.com/holdmusic?Bucket=com.twilio.music.ambient"
         self.call_ring_timeout_s = 20
